@@ -5,14 +5,14 @@ It defines the workflow graph, state, tools, nodes and edges.
 
 from copilotkit import CopilotKitMiddleware
 from langchain.agents import create_agent
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.query import query_data
 from src.todos import AgentState, todo_tools
 from src.form import generate_form
 
 agent = create_agent(
-    model="openai:gpt-4.1",
+    model="google_genai:gemini-2.0-flash",
     tools=[query_data, *todo_tools, generate_form],
     middleware=[CopilotKitMiddleware()],
     state_schema=AgentState,
