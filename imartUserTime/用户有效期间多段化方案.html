@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用户有效期间多段化方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+/* ============================================================
+   Tokens — light (bare :root defines the complete palette)
+   ============================================================ */
+:root {
+  --ground:      #E9EDF1;
+  --surface:     #FCFDFE;
+  --surface-alt: #F1F4F7;
+  --ink:         #16202A;
+  --ink-soft:    #47555F;
+  --ink-faint:   #77848E;
+  --rule:        #C8D3DC;
+  --rule-soft:   #DDE4EA;
+
+  --accent:      #1F5A78;
+  --accent-soft: #DCE9F0;
+  --accent-ink:  #16455E;
+
+  --valid:       #2C7355;
+  --valid-soft:  #DCEBE3;
+  --invalid:     #7E8792;
+  --invalid-soft:#E2E6EA;
+  --caution:     #9E4A26;
+  --caution-soft:#F4E4DC;
+
+  --code-bg:     #182129;
+  --code-ink:    #D5DEE6;
+  --code-dim:    #7C8B98;
+  --code-key:    #8FB8CE;
+  --code-str:    #A9C99A;
+  --code-com:    #66757F;
+
+  --shadow: 0 1px 2px rgba(22,32,42,.05), 0 8px 24px -12px rgba(22,32,42,.18);
+
+  --font-display: "Archivo", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Microsoft YaHei", "Meiryo", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #10171E;
+    --surface:     #18212A;
+    --surface-alt: #1E2933;
+    --ink:         #DCE4EB;
+    --ink-soft:    #A3B0BB;
+    --ink-faint:   #7A8892;
+    --rule:        #2E3C48;
+    --rule-soft:   #263341;
+
+    --accent:      #74A9C6;
+    --accent-soft: #1D3141;
+    --accent-ink:  #9CC6DE;
+
+    --valid:       #5FB48C;
+    --valid-soft:  #1B3129;
+    --invalid:     #7B8792;
+    --invalid-soft:#232D37;
+    --caution:     #D28457;
+    --caution-soft:#33231A;
+
+    --code-bg:     #0C1319;
+    --code-ink:    #C8D3DC;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:      #10171E;
+  --surface:     #18212A;
+  --surface-alt: #1E2933;
+  --ink:         #DCE4EB;
+  --ink-soft:    #A3B0BB;
+  --ink-faint:   #7A8892;
+  --rule:        #2E3C48;
+  --rule-soft:   #263341;
+
+  --accent:      #74A9C6;
+  --accent-soft: #1D3141;
+  --accent-ink:  #9CC6DE;
+
+  --valid:       #5FB48C;
+  --valid-soft:  #1B3129;
+  --invalid:     #7B8792;
+  --invalid-soft:#232D37;
+  --caution:     #D28457;
+  --caution-soft:#33231A;
+
+  --code-bg:     #0C1319;
+  --code-ink:    #C8D3DC;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0 24px 96px;
+}
+
+/* ---- Masthead ---------------------------------------------- */
+.masthead {
+  padding: 72px 0 40px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 20px;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(30px, 5.2vw, 46px);
+  line-height: 1.12;
+  letter-spacing: -.018em;
+  text-wrap: balance;
+  margin: 0 0 18px;
+}
+
+.standfirst {
+  font-size: 17.5px;
+  color: var(--ink-soft);
+  max-width: 62ch;
+  margin: 0 0 28px;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.meta b { color: var(--ink-soft); font-weight: 500; }
+
+/* ---- Sections ---------------------------------------------- */
+section { padding-top: 56px; }
+
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.sec-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: .06em;
+  flex: none;
+  padding-top: 4px;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(20px, 3vw, 25px);
+  letter-spacing: -.012em;
+  line-height: 1.25;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -.005em;
+  margin: 34px 0 10px;
+}
+
+p { margin: 0 0 16px; max-width: 68ch; }
+p.lead { color: var(--ink-soft); }
+
+ul, ol { max-width: 68ch; padding-left: 22px; margin: 0 0 16px; }
+li { margin-bottom: 8px; }
+li::marker { color: var(--accent); }
+
+code {
+  font-family: var(--font-mono);
+  font-size: .88em;
+  background: var(--surface-alt);
+  border: 1px solid var(--rule-soft);
+  border-radius: 3px;
+  padding: 1px 5px;
+  word-break: break-word;
+}
+
+strong { font-weight: 600; }
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- Timeline diagram -------------------------------------- */
+.diagram {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+  padding: 28px;
+  margin: 28px 0 20px;
+  overflow-x: auto;
+}
+
+.diagram-inner { min-width: 620px; }
+
+.tl-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 9px;
+}
+
+.tl {
+  display: grid;
+  grid-template-columns: repeat(22, 1fr);
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.seg {
+  border-radius: 2px;
+  padding: 9px 8px 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.45;
+  min-height: 54px;
+}
+
+.seg .rng { display: block; font-weight: 500; }
+.seg .st  { display: block; letter-spacing: .08em; margin-top: 3px; opacity: .82; }
+
+.seg-valid   { background: var(--valid-soft);   color: var(--valid);   border: 1px solid var(--valid); }
+.seg-invalid { background: var(--invalid-soft); color: var(--invalid); border: 1px dashed var(--invalid); }
+.seg-empty   { background: transparent; border: 1px dashed var(--rule); min-height: 54px; border-radius: 2px; }
+
+.tl-arrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 16px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--accent);
+}
+.tl-arrow::before,
+.tl-arrow::after {
+  content: "";
+  height: 1px;
+  background: var(--rule);
+  flex: 1;
+}
+
+.tl-foot {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin: 14px 0 0;
+}
+
+/* ---- Table ------------------------------------------------- */
+.table-scroll { overflow-x: auto; margin: 22px 0; }
+
+table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14.5px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+
+th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 500;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface-alt);
+  white-space: nowrap;
+}
+
+td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  color: var(--ink-soft);
+}
+tbody tr:last-child td { border-bottom: none; }
+td:first-child { color: var(--ink); }
+td code { background: transparent; border: none; padding: 0; color: var(--accent-ink); font-weight: 500; }
+
+/* ---- Code -------------------------------------------------- */
+pre {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-radius: 4px;
+  padding: 18px 20px;
+  overflow-x: auto;
+  margin: 18px 0;
+  font-size: 13px;
+  line-height: 1.65;
+  border: 1px solid var(--rule);
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  white-space: pre;
+}
+pre .c { color: var(--code-com); }
+pre .k { color: var(--code-key); }
+pre .s { color: var(--code-str); }
+
+.code-cap {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 22px 0 -8px;
+}
+
+/* ---- Step cards -------------------------------------------- */
+.steps { display: flex; flex-direction: column; gap: 26px; margin: 26px 0; }
+
+.step {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--rule);
+}
+
+.step-n {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--surface);
+  background: var(--accent);
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border-radius: 2px;
+  flex: none;
+}
+
+.step-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15.5px;
+  margin: 0;
+}
+.step-title code { background: none; border: none; padding: 0; color: var(--ink-soft); font-weight: 400; font-size: 13px; }
+
+.step-body { padding: 18px 20px 6px; }
+.step-body p { margin-bottom: 12px; }
+.step-body pre { margin-bottom: 18px; }
+
+/* ---- Callout ----------------------------------------------- */
+.note {
+  border-left: 3px solid var(--caution);
+  background: var(--caution-soft);
+  padding: 14px 18px;
+  margin: 20px 0;
+  border-radius: 0 3px 3px 0;
+}
+.note p { margin: 0; max-width: none; color: var(--ink); font-size: 15px; }
+.note .tag {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--caution);
+  margin-bottom: 5px;
+}
+
+/* ---- Pitfall list ------------------------------------------ */
+.pits { display: flex; flex-direction: column; gap: 2px; margin: 22px 0; }
+
+.pit {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 18px;
+  padding: 16px 0;
+  border-top: 1px solid var(--rule-soft);
+}
+.pit:last-child { border-bottom: 1px solid var(--rule-soft); }
+
+.pit-key {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  line-height: 1.5;
+  padding-top: 2px;
+  word-break: break-word;
+}
+.pit-txt { margin: 0; max-width: none; font-size: 15px; color: var(--ink-soft); }
+.pit-txt b { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 640px) {
+  .pit { grid-template-columns: 1fr; gap: 6px; }
+  .diagram { padding: 18px 14px; }
+  .masthead { padding-top: 48px; }
+}
+
+/* ---- Footer ------------------------------------------------ */
+.foot {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+  font-size: 13.5px;
+  color: var(--ink-faint);
+}
+.foot ul { padding-left: 18px; }
+.foot li { margin-bottom: 5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">intra-mart Accel Platform / IM-共通マスタ</p>
+    <h1>用户有效期间多段化方案</h1>
+    <p class="standfirst">
+      新版 IM-共通マスタ 中 <code>setUser</code> 无法再修改有效期间。本文说明为什么，
+      以及如何用期间分割 + 无效化，在页面上支持任意组数的有效期间。
+    </p>
+    <div class="meta">
+      <span><b>对象</b> jp.co.intra_mart.foundation.master.user</span>
+      <span><b>版本</b> im_master 8.0.0</span>
+      <span><b>范围</b> Java API 侧</span>
+    </div>
+  </header>
+
+  <!-- ==================================================== -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">§1</span>
+      <h2>需求</h2>
+    </div>
+
+    <p>页面上要能给一个用户设置<strong>多组有效期间</strong>，组数不固定，由使用者自己增删行。点击保存后写入 IM-共通マスタ。典型输入：</p>
+
+    <ul>
+      <li>2026/05/01 – 2028/06/01</li>
+      <li>2029/06/01 – 2030/06/01</li>
+    </ul>
+
+    <p class="lead">
+      两段之间存在 2028/06/02 – 2029/05/31 这段空档，用户在这期间应当是无效状态。
+      难点在于：共通マスタ的期间轴不接受"空档"这种表达，必须换一种方式落库。
+    </p>
+  </section>
+
+  <!-- ==================================================== -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">§2</span>
+      <h2>旧写法为什么失效</h2>
+    </div>
+
+    <p>
+      以前的做法是把整个 <code>User</code> 对象填好、带上新的 <code>startDate</code> / <code>endDate</code>，
+      一次 <code>setUser</code> 就完成有效期间的更新。新版本这条路被封死了，javadoc 上写得很直接：
+    </p>
+
+    <div class="note">
+      <span class="tag">UserWriter#setUser</span>
+      <p>ユーザを登録します。すでに登録されている場合は更新されます。<strong>このメソッドで期間は変更できません。</strong></p>
+    </div>
+
+    <p>
+      原因是 <code>userCd</code> / <code>termCd</code> / <code>startDate</code> / <code>endDate</code>
+      这四项现在是定位记录用的 key，必须和库里已有的期间完全一致。
+      <code>setUser</code> 只负责改"某个期间内部的内容"，改不了期间本身的边界。
+    </p>
+
+    <p>期间边界的操作被拆到了专用方法上：</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>方法</th><th>作用</th><th>注意</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>separateTermUser(bizKey, termCd, date)</code></td>
+            <td>在指定日把一个期间切成两段</td>
+            <td>分割日之前的段继承原 termCd，之后的段拿到新 termCd</td>
+          </tr>
+          <tr>
+            <td><code>mergeBackwardTermUser(bizKey, termCd)</code></td>
+            <td>与前一个期间合并</td>
+            <td>前一个期间的数据会丢失</td>
+          </tr>
+          <tr>
+            <td><code>mergeForwardTermUser(bizKey, termCd)</code></td>
+            <td>与后一个期间合并</td>
+            <td>后一个期间的数据会丢失</td>
+          </tr>
+          <tr>
+            <td><code>moveTermUser(bizKey, term)</code></td>
+            <td>改期间的开始日 / 结束日</td>
+            <td>扩过相邻期间时，被覆盖的期间会被删除</td>
+          </tr>
+          <tr>
+            <td><code>setUser(user)</code></td>
+            <td>写入某个期间内部的内容 + 有效/无效标志</td>
+            <td>不能改期间边界</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================================================== -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">§3</span>
+      <h2>核心模型：用无效段填满空档</h2>
+    </div>
+
+    <p>
+      IM-共通マスタ 的期间轴从 システム開始日（1900/01/01）到 システム終了日（2999/12/31）
+      <strong>连续铺满，中间不允许留空</strong>。所以"有效期间是断开的"不能靠留白表达，
+      而是：把轴切成多段，再把不该生效的段标记为<strong>无效</strong>。
+      管理者操作指南对无效化的定义是「無効化すると、その期間は存在しないものとして扱われます」。
+    </p>
+
+    <div class="diagram">
+      <div class="diagram-inner">
+        <p class="tl-label">页面输入 — 只有有效期间，组数不定</p>
+        <div class="tl">
+          <div class="seg-empty" style="grid-column: 1 / 6;"></div>
+          <div class="seg seg-valid" style="grid-column: 6 / 11;">
+            <span class="rng">2026/05/01<br>– 2028/06/01</span>
+            <span class="st">有効</span>
+          </div>
+          <div class="seg-empty" style="grid-column: 11 / 14;"></div>
+          <div class="seg seg-valid" style="grid-column: 14 / 18;">
+            <span class="rng">2029/06/01<br>– 2030/06/01</span>
+            <span class="st">有効</span>
+          </div>
+          <div class="seg-empty" style="grid-column: 18 / 23;"></div>
+        </div>
+
+        <p class="tl-arrow">buildTimeline() — 用无效段补满空档</p>
+
+        <p class="tl-label">落库的期间轴 — 5 条记录，连续无空洞</p>
+        <div class="tl">
+          <div class="seg seg-invalid" style="grid-column: 1 / 6;">
+            <span class="rng">1900/01/01<br>– 2026/04/30</span>
+            <span class="st">無効</span>
+          </div>
+          <div class="seg seg-valid" style="grid-column: 6 / 11;">
+            <span class="rng">2026/05/01<br>– 2028/06/01</span>
+            <span class="st">有効</span>
+          </div>
+          <div class="seg seg-invalid" style="grid-column: 11 / 14;">
+            <span class="rng">2028/06/02<br>– 2029/05/31</span>
+            <span class="st">無効</span>
+          </div>
+          <div class="seg seg-valid" style="grid-column: 14 / 18;">
+            <span class="rng">2029/06/01<br>– 2030/06/01</span>
+            <span class="st">有効</span>
+          </div>
+          <div class="seg seg-invalid" style="grid-column: 18 / 23;">
+            <span class="rng">2030/06/02<br>– 2999/12/31</span>
+            <span class="st">無効</span>
+          </div>
+        </div>
+        <p class="tl-foot">※ 宽度为示意，非按实际时长比例。</p>
+      </div>
+    </div>
+
+    <p>
+      无效标志落在 <code>User#setDisable(boolean)</code> 上（javadoc 写作「削除フラグ」，
+      由 <code>ITerm</code> / <code>IDisable</code> 继承而来）。相应地，
+      <strong>所有读取都必须带 <code>isDisable = true</code></strong>，
+      否则已经设为无效的段在下次编辑时根本查不出来。
+    </p>
+  </section>
+
+  <!-- ==================================================== -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">§4</span>
+      <h2>实现：三步流水线</h2>
+    </div>
+
+    <p>
+      页面提交上来的是一个长度不定的有效期间 list。服务端一次保存分三步走，
+      三步是严格有序的 —— 必须先把期间轴的形状调对，才能往每一段里写内容。
+    </p>
+
+    <div class="steps">
+
+      <!-- Step 1 -->
+      <div class="step">
+        <div class="step-head">
+          <span class="step-n">1</span>
+          <h3 class="step-title" style="margin:0;">推导完整期间轴 <code>buildTimeline()</code></h3>
+        </div>
+        <div class="step-body">
+          <p>排序 → 合并相邻/重叠的输入 → 用无效段把空档和首尾补满。</p>
+<pre><code><span class="c">// 相邻或重叠的有效期间先并成一段，避免产生无意义的切点</span>
+<span class="k">for</span> (ValidPeriod p : periods) {
+    <span class="k">if</span> (merged.isEmpty()) { merged.add(p); <span class="k">continue</span>; }
+    ValidPeriod prev = merged.get(merged.size() - 1);
+    <span class="k">if</span> (!p.getFrom().after(addDays(prev.getTo(), 1))) {
+        Date newTo = prev.getTo().after(p.getTo()) ? prev.getTo() : p.getTo();
+        merged.set(merged.size() - 1, <span class="k">new</span> ValidPeriod(prev.getFrom(), newTo));
+    } <span class="k">else</span> {
+        merged.add(p);
+    }
+}
+
+<span class="c">// 用无效段填满，覆盖 sysStart ~ sysEnd 全区间</span>
+Date cursor = sysStart;                          <span class="c">// AppCommonManager#getSystemStartDate()</span>
+<span class="k">for</span> (ValidPeriod p : merged) {
+    <span class="k">if</span> (p.getFrom().after(cursor)) {
+        timeline.add(<span class="k">new</span> TermSegment(cursor, addDays(p.getFrom(), -1), <span class="k">false</span>));
+    }
+    timeline.add(<span class="k">new</span> TermSegment(p.getFrom(), p.getTo(), <span class="k">true</span>));
+    cursor = addDays(p.getTo(), 1);
+}
+<span class="k">if</span> (!cursor.after(sysEnd)) {
+    timeline.add(<span class="k">new</span> TermSegment(cursor, sysEnd, <span class="k">false</span>));
+}</code></pre>
+          <p>
+            边界情况一并覆盖：有效期间恰好从 1900/01/01 开始时不生成头部无效段，
+            恰好到 2999/12/31 结束时不生成尾部无效段，一条都没填时整条轴是一段全无效。
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step">
+        <div class="step-head">
+          <span class="step-n">2</span>
+          <h3 class="step-title" style="margin:0;">对齐期间边界 <code>reconcileTerms()</code></h3>
+        </div>
+        <div class="step-body">
+          <p><strong>分割</strong> —— 遍历第二段起的每个开始日，如果它还不是切点就切开：</p>
+<pre><code><span class="k">for</span> (<span class="k">int</span> i = 1; i &lt; timeline.size(); i++) {
+    Date boundary = timeline.get(i).getStart();
+
+    <span class="c">// 每次分割后 termCd 会重排，所以循环体内重新取，不能提到外面</span>
+    ITerm[] terms = sortByStart(manager.getUserTermList(bizKey, <span class="k">true</span>));
+    ITerm target  = findContaining(terms, boundary);
+    <span class="k">if</span> (isSameDay(target.getStartDate(), boundary)) <span class="k">continue</span>;
+
+    manager.separateTermUser(bizKey, target.getTermCd(), boundary);
+}</code></pre>
+          <p><strong>结合</strong> —— 上一次保存可能留下多余切点（这次改成了更少的组数），逐个并掉：</p>
+<pre><code>Set&lt;Long&gt; wanted = <span class="c">/* timeline 中第 2 段起的所有开始日 */</span>;
+
+<span class="k">while</span> (<span class="k">true</span>) {
+    ITerm[] terms = sortByStart(manager.getUserTermList(bizKey, <span class="k">true</span>));
+    String mergeTargetCd = <span class="k">null</span>;
+    <span class="k">for</span> (<span class="k">int</span> i = 1; i &lt; terms.length; i++) {   <span class="c">// 首段开始日动不了</span>
+        <span class="k">if</span> (!wanted.contains(truncate(terms[i].getStartDate()).getTime())) {
+            mergeTargetCd = terms[i].getTermCd();
+            <span class="k">break</span>;
+        }
+    }
+    <span class="k">if</span> (mergeTargetCd == <span class="k">null</span>) <span class="k">break</span>;
+    manager.mergeBackwardTermUser(bizKey, mergeTargetCd);  <span class="c">// 每并一次结构就变，重来</span>
+}</code></pre>
+          <p>合并会丢数据，但第 3 步会把每一段整体覆写，所以这里不用担心。实际代码里给这个 while 加了循环上限做保护。</p>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step">
+        <div class="step-head">
+          <span class="step-n">3</span>
+          <h3 class="step-title" style="margin:0;">写入有效/无效 <code>applyDisableFlags()</code></h3>
+        </div>
+        <div class="step-body">
+          <p>此时库里的期间数量和边界已经和 timeline 一一对应，逐段覆写即可。</p>
+<pre><code>ITerm[] terms = sortByStart(manager.getUserTermList(bizKey, <span class="k">true</span>));
+
+<span class="k">for</span> (<span class="k">int</span> i = 0; i &lt; terms.length; i++) {
+    ITerm term      = terms[i];
+    TermSegment seg = timeline.get(i);
+
+    <span class="c">// isDisable=true，否则取不到已无效化的期间</span>
+    User user = manager.getUser(bizKey, term.getStartDate(), <span class="k">true</span>);
+
+    <span class="c">// setUser 的 key 四项必须和取出来的完全一致</span>
+    user.setUserCd(bizKey.getUserCd());
+    user.setTermCd(term.getTermCd());
+    user.setStartDate(term.getStartDate());
+    user.setEndDate(term.getEndDate());
+
+    user.setDisable(!seg.isEnabled());   <span class="c">// 无效 = 该期间视为不存在</span>
+
+    manager.setUser(user);
+}</code></pre>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="code-cap">回读（画面初期表示用）</p>
+<pre><code><span class="k">for</span> (ITerm term : sortByStart(manager.getUserTermList(bizKey, <span class="k">true</span>))) {
+    User user = manager.getUser(bizKey, term.getStartDate(), <span class="k">true</span>);
+    <span class="k">if</span> (user != <span class="k">null</span> &amp;&amp; !user.isDisable()) {
+        result.add(<span class="k">new</span> ValidPeriod(term.getStartDate(), term.getEndDate()));
+    }
+}</code></pre>
+    <p>无效段被过滤掉，页面上又变回"只有几组有效期间"的样子，和保存时的输入形状对称。</p>
+  </section>
+
+  <!-- ==================================================== -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">§5</span>
+      <h2>实现时的坑</h2>
+    </div>
+
+    <div class="pits">
+      <div class="pit">
+        <div class="pit-key">termCd 会重排</div>
+        <p class="pit-txt"><b>每次 separateTermUser 之后必须重新 getUserTermList。</b>把期间列表缓存在循环外面，第二次分割就会拿着失效的 termCd 去操作。</p>
+      </div>
+      <div class="pit">
+        <div class="pit-key">isDisable = true</div>
+        <p class="pit-txt">所有 <b>getUserTermList / getUser 都要传 true</b>。漏掉的话，上次设为无效的段查不出来，分割时会找不到目标期间而报错。</p>
+      </div>
+      <div class="pit">
+        <div class="pit-key">事务</div>
+        <p class="pit-txt">共通マスタ更新系 API 必须在<b>事务内</b>执行。分割成功、setUser 失败的话，期间轴会停在半成品状态，下次打开页面就是乱的。</p>
+      </div>
+      <div class="pit">
+        <div class="pit-key">merge 会丢数据</div>
+        <p class="pit-txt">mergeBackward / mergeForward 会丢掉一侧期间的数据。<b>只用来消除多余切点</b>，不要拿它当"缩短期间"用 —— 那是 moveTermUser 的活。</p>
+      </div>
+      <div class="pit">
+        <div class="pit-key">重叠输入</div>
+        <p class="pit-txt">buildTimeline 会静默地把重叠区间合并掉，用户看不出自己填错了。<b>重叠校验放在前端</b>，提交前弹出提示。</p>
+      </div>
+      <div class="pit">
+        <div class="pit-key">多语言</div>
+        <p class="pit-txt">若用了 <code>setPutLocaleElement</code> 存多语言，第 3 步要<b>按 locale 逐个</b> <code>getUser(bizKey, date, locale, true)</code> 再各自 setUser，否则会丢掉其它语言的记录。</p>
+      </div>
+      <div class="pit">
+        <div class="pit-key">账号有效期间</div>
+        <p class="pit-txt">这套只改共通マスタ侧。若需求是"无效期间内不能登录"，<b>账号侧的 有効期間（imm_account，单一区间）还得另外联动</b>，那不归 UserManager 管。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================== -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">§6</span>
+      <h2>待确认</h2>
+    </div>
+
+    <ul>
+      <li><code>UserBizKey</code> 的构造方式：<code>new UserBizKey()</code> + <code>setUserCd()</code>，还是 <code>new UserBizKey(userCd)</code> —— 按各版本 javadoc 确认。</li>
+      <li>本文的 API 名称与语义取自 <strong>im_master 8.0.0</strong> 的 javadoc。若项目锁定在其他版本，请对照该版本核对方法签名。</li>
+      <li>Action 层示例按 SAStruts 写。若用 TERASOLUNA / Spring，注解换成 <code>@RequestMapping</code> + <code>@Transactional</code>，<code>String[] → List&lt;ValidPeriod&gt;</code> 的转换逻辑原样搬。</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <p><strong>参考</strong></p>
+    <ul>
+      <li><a href="https://api.intra-mart.jp/iap/javadoc/im_master_apidocs/jp/co/intra_mart/foundation/master/user/UserWriter.html">UserWriter (javadoc-im_master 8.0.0)</a> — <code>setUser</code> 的期间限制、<code>separateTermUser</code> 的分割语义</li>
+      <li><a href="https://api.intra-mart.jp/iap/javadoc/im_master_apidocs/jp/co/intra_mart/foundation/master/user/UserManager.html">UserManager (javadoc-im_master 8.0.0)</a></li>
+      <li><a href="https://api.intra-mart.jp/iap/javadoc/im_master_apidocs/jp/co/intra_mart/foundation/master/common/model/ITerm.html">ITerm (javadoc-im_master 8.0.0)</a></li>
+      <li><a href="https://api.intra-mart.jp/iap/javadoc/im_master_apidocs/jp/co/intra_mart/foundation/master/user/model/User.html">User model (javadoc-im_master 8.0.0)</a></li>
+      <li><a href="https://document.intra-mart.jp/library/iap/public/im_master/im_master_administrator_guide/texts/common_guide/common_guide_1.html">期間化について — IM-共通マスタ 管理者操作ガイド</a></li>
+      <li><a href="https://document.intra-mart.jp/library/iap/public/im_master/im_master_specification/texts/api/manager.html">4.2. マネージャ — IM-共通マスタ 仕様書</a></li>
+    </ul>
+  </footer>
+
+</div>
+
+</html>
